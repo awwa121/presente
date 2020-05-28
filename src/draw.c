@@ -45,9 +45,23 @@ void draw_state(const level *lvl, const state *sta){
         // Draw a circle with the radius of the entity, color depends on the enemy type
         if(sta->enemies[i].kind == MINION){
             DrawCircleV(vec,ent.rad,YELLOW);
-        }else{
+        }// Se agregan las condiciones para dibujar a los BOSS y sus respectivos colores (escogidos de tal manera para que una fase destaque por sobre la anterior)
+        else if(sta->enemies[i].kind == BRUTE){
             DrawCircleV(vec,ent.rad,RED);
+            }
+        else if (sta->enemies[i].kind == BOSS2){
+                DrawCircleV(vec,ent.rad,ORANGE);
+                }
+        else if (sta->enemies[i].kind == BOSS){
+                 DrawCircleV(vec,ent.rad,DARKGRAY);   
+                }
+        else if (sta->enemies[i].kind == BOSS3){
+
+            DrawCircleV(vec,ent.rad,VIOLET);
         }
+
+            
+        
     }
 
     // Draw player

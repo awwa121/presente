@@ -23,7 +23,8 @@ state *state_new(){
     // Retrieve pointer to the state
     return sta;
 }
-
+// Aqui creo un arreglo de tamaño fijo que me ayudara, iniciando con valor cero a todos sus elementos, a darle un "retroseso" a los enemigos cuando alcanzan al jugador
+int stun[128] = { };
 void state_update(level *lvl, state *sta){
 
     // == Update player speed according to buttons
@@ -45,7 +46,82 @@ void state_update(level *lvl, state *sta){
         sta->pla.ent.vx = mov_x/mov_norm * PLAYER_SPEED;
         sta->pla.ent.vy = mov_y/mov_norm * PLAYER_SPEED;
     }
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Se les da movimiento al BOSS (y a sus futuras fases) y las condiciones para que este comienze a moverse, pueden pasar a travez de las paredes  
 
+    int i= 0;
+    while ( i < sta->n_enemies){
+        if (sta->enemies[i].kind == BOSS){
+            float mov_BOSS_x = sta->pla.ent.x - sta->enemies[i].ent.x;
+            float mov_BOSS_y = sta->pla.ent.y - sta->enemies[i].ent.y;
+            float mov_BOSS_norm = sqrt(mov_BOSS_x*mov_BOSS_x+mov_BOSS_y*mov_BOSS_y);
+            // Aqui les doy la condicion de estar a una distancia del jugador o que este recibiera daño para comenzar a moverse hacia el jugador
+            // Ademas asumo que cualquier fuente de daño hacia el BOSS sera producto de la accion del jugador (directa o indirectamente)
+            // Se pone una condicion extra para pasar a la siguiente fase del BOSS
+            if ( (mov_BOSS_norm < 270||sta->enemies[i].ent.hp < 150)&&( stun[i] == 0 )){   
+                sta->enemies[i].ent.vx = mov_BOSS_x/mov_BOSS_norm * BOSS_SPEED;
+                sta->enemies[i].ent.vy = mov_BOSS_y/mov_BOSS_norm * BOSS_SPEED; 
+            }
+            if (sta->enemies[i].ent.hp <= 10){   
+                sta->enemies[i].ent.hp = 120;
+                sta->enemies[i].kind = BOSS2;
+            }
+            // Aqui ponemos una condicionante al movimiento, esta seria el retroseso o inmovilizaion al BOSS cuando este 
+            // alcanza al jugador (coli), uso los valores del arreglo definido más arriba como stun, esto se repite en BOSS2 y BOSS3 pero algo distinto debido a las condicones iniciales de BOSS
+            if ((mov_BOSS_norm <= 30.0)||stun[i] != 0) {
+                if (stun[i]==0){
+                    stun[i] = 50;
+                }
+                stun[i]--;
+                sta->enemies[i].ent.vx = mov_BOSS_x/mov_BOSS_norm * BOSS_SPEED*0;
+                sta->enemies[i].ent.vy = mov_BOSS_y/mov_BOSS_norm * BOSS_SPEED*0;
+            }
+        }// Aqui la unica condicion para moverse es que sea tipo BOSS2 ya que este solo aparecera si la vida de BOSS ha bajado lo suficiente 
+        // El enemigo se cura una cantidad neta de vida y aumenta su velocidad
+        if (sta->enemies[i].kind == BOSS2){
+            float mov_BOSS_x = sta->pla.ent.x - sta->enemies[i].ent.x;
+            float mov_BOSS_y = sta->pla.ent.y - sta->enemies[i].ent.y;
+            float mov_BOSS_norm = sqrt(mov_BOSS_x*mov_BOSS_x+mov_BOSS_y*mov_BOSS_y);
+            if (sta->enemies[i].ent.hp <= 10)
+            {
+                sta->enemies[i].ent.hp = 60;
+                sta->enemies[i].kind = BOSS3;
+            }else if (!(mov_BOSS_norm <= 30.0) && (stun[i] == 0 )){
+            sta->enemies[i].ent.vx = mov_BOSS_x/mov_BOSS_norm * BOSS_SPEED*1.72;
+            sta->enemies[i].ent.vy = mov_BOSS_y/mov_BOSS_norm * BOSS_SPEED*1.72;
+            }else {
+                if (stun[i]==0){
+                    stun[i] = 50;
+                }
+                stun[i]--;
+                sta->enemies[i].ent.vx = mov_BOSS_x/mov_BOSS_norm * BOSS_SPEED*0;
+                sta->enemies[i].ent.vy = mov_BOSS_y/mov_BOSS_norm * BOSS_SPEED*0;
+            }
+        }// Se aplica lo mismo que para BOSS2.
+        if (sta->enemies[i].kind == BOSS3){
+            float mov_BOSS_x = sta->pla.ent.x - sta->enemies[i].ent.x;
+            float mov_BOSS_y = sta->pla.ent.y - sta->enemies[i].ent.y;
+            float mov_BOSS_norm = sqrt(mov_BOSS_x*mov_BOSS_x+mov_BOSS_y*mov_BOSS_y);
+            if (!(mov_BOSS_norm <= 30.0) && (stun[i] == 0 )){  
+                sta->enemies[i].ent.vx = mov_BOSS_x/mov_BOSS_norm * BOSS_SPEED*2.05;
+                sta->enemies[i].ent.vy = mov_BOSS_y/mov_BOSS_norm * BOSS_SPEED*2.05;
+            }
+
+            else {
+                if (stun[i]==0){
+                    stun[i] = 50;
+                }
+                stun[i]--;
+                sta->enemies[i].ent.vx = mov_BOSS_x/mov_BOSS_norm * BOSS_SPEED*0;
+                sta->enemies[i].ent.vy = mov_BOSS_y/mov_BOSS_norm * BOSS_SPEED*0;
+            }
+            
+            
+    
+        } 
+    i++;
+    }
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // == Make the player shoot
     // Lower the player's cooldown by 1
     sta->pla.cooldown -= 1;
@@ -128,11 +204,13 @@ void state_update(level *lvl, state *sta){
         // Update the number of enemies
         sta->n_enemies = new_n_enemies;
     }
-
 }
+
+
 
 void state_populate_random(level *lvl, state *sta, int n_enemies){
     assert(n_enemies<=MAX_ENEMIES);
+    int j = 1;
     while(sta->n_enemies<n_enemies){
         // Until an empty cell is found, Las Vegas algorithm approach.
         while(1){
@@ -147,24 +225,34 @@ void state_populate_random(level *lvl, state *sta, int n_enemies){
 
                 // Initialize all new enemy fields to 0
                 memset(new_enemy,0,sizeof(enemy));
-
                 // Put the new enemy at the center of the chosen cell
                 new_enemy->ent.x = (posx+0.5)*TILE_SIZE;
                 new_enemy->ent.y = (posy+0.5)*TILE_SIZE;
                 // Pick an enemy tipe and set variables accordingly
                 int brute = rand()%4==0; // brute has 1/4 chance.
+                int boss = rand()%10==0;
                 if(brute){
                     new_enemy->kind   = BRUTE;
                     new_enemy->ent.hp = BRUTE_HP;
                     new_enemy->ent.rad = BRUTE_RAD;
-                }else{
-                    new_enemy->kind   = MINION;
+                }// Aqui se crean los tipo BOSS y sus atributos, que como minimo habra 1 por mapa (tiene una probabilidad de que aparesca aun más veces que si no me equivoco seria 1/40)
+                else{
+                    if(boss||j){
+                    new_enemy->kind   = BOSS;
+                    new_enemy->ent.hp = BOSS_HP;
+                    new_enemy->ent.rad = BOSS_RAD;
+                    new_enemy->ent.speed = BOSS_SPEED;   
+                    j= 0;
+                    }
+                    else {new_enemy->kind   = MINION;
                     new_enemy->ent.hp = MINION_HP;
                     new_enemy->ent.rad = MINION_RAD;
+                    }
                 }
                 // Break while(1) as the operation was successful
                 break;
             }
+
         }
     }
 }

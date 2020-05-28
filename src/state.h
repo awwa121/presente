@@ -10,8 +10,12 @@
 
 #define MINION_HP   4
 #define MINION_RAD 12
-#define BRUTE_HP   12
 #define BRUTE_RAD  16
+#define BRUTE_HP   12
+
+#define BOSS_RAD  30
+#define BOSS_HP   150
+#define BOSS_SPEED 2
 
 #define BULLET_DMG 3
 #define BULLET_SPEED 16
@@ -26,7 +30,8 @@ typedef struct {
 } player;
 
 // ==== ENEMY DEFINITION
-typedef enum {MINION=0, BRUTE=1} enemykind;
+// Agregue el enemigo BOOS y sus fases a la struct enemy, mi unica duda si al agregarlos aqui afectara al numero total de enemigos
+typedef enum {MINION=0, BRUTE=1,BOSS=2, BOSS2=3, BOSS3=4 } enemykind;
 
 typedef struct {
     entity ent;
